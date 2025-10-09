@@ -1,0 +1,42 @@
+# Core libraries
+numpy
+scikit-learn
+tqdm
+joblib
+
+# Deep learning
+torch
+transformers
+
+# Audio processing
+librosa
+soundfile
+pydub
+SpeechRecognition
+openai-whisper
+
+# Translation & Speech synthesis
+googletrans==4.0.0-rc1
+gTTS
+
+# Video handling
+moviepy
+
+# Interactive widgets & display (for Colab/Jupyter UI)
+ipywidgets
+IPython
+
+# Utility and system
+base64
+time
+os
+
+# Optional: if using Google Drive/Colab
+google-colab
+
+# For progress and augmentation
+tqdm
+
+# Note: ffmpeg is required by librosa, pydub, and moviepy
+# You can install it manually via:
+# !apt-get install ffmpeg
