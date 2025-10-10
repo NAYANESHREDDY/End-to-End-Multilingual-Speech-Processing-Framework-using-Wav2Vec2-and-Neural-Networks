@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Audio & Video Translation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .card { background-color: white; border-radius: 1.5rem; padding: 2rem; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1); transition: all 0.3s ease-in-out; }
+        .btn-primary { background-color: #2563eb; color: white; font-weight: 600; padding: 0.75rem 1.5rem; border-radius: 9999px; transition: background-color 0.2s; }
+        .btn-primary:hover { background-color: #1d4ed8; }
+        .btn-primary:disabled { background-color: #9ca3af; cursor: not-allowed; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .hidden { display: none; }
+        .mic-button { transition: all 0.2s; }
+        .mic-button.recording { background-color: #ef4444; color: white; box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.4); }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800">AI Audio Translator</h1>
+            <p class="text-gray-600 mt-2">Upload a file or record from your mic to translate into a supported Indian language.</p>
+        </div>
+
+        <div id="main-container" class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            <div id="left-column" class="lg:col-span-5 flex justify-center">
+                <div class="card w-full max-w-2xl">
+                    <div id="step-1-upload" class="flex flex-col items-center space-y-6">
+                        <h2 class="text-xl font-semibold text-gray-700">Upload Your File</h2>
+                        <input type="file" id="file-input" class="block w-full max-w-sm text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" accept="audio/*,video/*">
+                        <button id="upload-btn" class="btn-primary w-full max-w-sm">Upload and Transcribe</button>
+                        
+                        <div class="w-full max-w-sm text-center border-t border-gray-200 pt-6">
+                            <h2 class="text-xl font-semibold text-gray-700 mb-4">Or Record Audio</h2>
+                            <button id="mic-button" class="mic-button bg-gray-200 p-4 rounded-full">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+                            </button>
+                            <p id="mic-status" class="text-gray-500 mt-2 text-sm">Click to start recording</p>
+                        </div>
+                    </div>
+
+                    <div id="loading-state" class="hidden text-center py-8">
+                        <div class="loader mx-auto"></div>
+                        <p id="loading-text" class="mt-4 text-gray-600">Processing your file...</p>
+                    </div>
+
+                    <div id="step-2-translate" class="hidden">
+                         <h2 class="text-xl font-semibold text-gray-700 mb-2">Review and Translate</h2>
+                         <div class="bg-gray-100 p-4 rounded-lg my-4 max-h-32 overflow-y-auto">
+                             <p class="text-sm font-medium text-gray-500">Original Text (Detected):</p>
+                             <p id="transcribed-text" class="text-gray-800 italic"></p>
+                         </div>
+                         <label for="language-select" class="block mb-2 font-medium text-gray-700">Choose a language:</label>
+                         <select id="language-select" class="w-full p-2 border border-gray-300 rounded-lg"></select>
+                         <button id="translate-btn" class="btn-primary w-full mt-6">Translate and Create Audio</button>
+                    </div>
+
+                    <div id="step-3-result" class="hidden">
+                        <h2 class="text-xl font-semibold text-gray-700 mb-4">Here is your translated audio!</h2>
+                        <audio id="result-audio" controls class="w-full"></audio>
+                        <button id="start-over-btn" class="w-full mt-6 bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-full hover:bg-gray-300">Start Over</button>
+                    </div>
+
+                    <div id="error-state" class="hidden text-center py-4">
+                        <p class="text-red-600 font-semibold">An Error Occurred</p>
+                        <p id="error-message" class="text-gray-600 mt-2"></p>
+                        <button onclick="location.reload()" class="w-1/2 mt-6 bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-full hover:bg-gray-300">Try Again</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="right-column" class="lg:col-span-2 hidden">
+                <div id="transcription-panel" class="card">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-4">Transcription</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <h3 class="font-medium text-gray-500">Original Text</h3>
+                            <p id="final-original-text" class="mt-1 text-gray-800 bg-gray-50 p-3 rounded-lg"></p>
+                        </div>
+                        <div>
+                            <h3 class="font-medium text-gray-500">Translated Text</h3>
+                            <p id="final-translated-text" class="mt-1 text-gray-800 bg-gray-50 p-3 rounded-lg"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const COLAB_BACKEND_URL = "https://gertrude-absolutory-nonignominiously.ngrok-free.dev";
+
+        // DOM Elements
+        const leftColumn = document.getElementById('left-column');
+        const rightColumn = document.getElementById('right-column');
+        const transcriptionPanel = document.getElementById('transcription-panel');
+        const step1 = document.getElementById('step-1-upload');
+        const step2 = document.getElementById('step-2-translate');
+        const step3 = document.getElementById('step-3-result');
+        const loading = document.getElementById('loading-state');
+        const loadingText = document.getElementById('loading-text');
+        const errorState = document.getElementById('error-state');
+        const errorMessage = document.getElementById('error-message');
+        const fileInput = document.getElementById('file-input');
+        const uploadBtn = document.getElementById('upload-btn');
+        const translateBtn = document.getElementById('translate-btn');
+        const startOverBtn = document.getElementById('start-over-btn');
+        const micButton = document.getElementById('mic-button');
+        const micStatus = document.getElementById('mic-status');
+        const transcribedTextElem = document.getElementById('transcribed-text');
+        const languageSelect = document.getElementById('language-select');
+        const resultAudio = document.getElementById('result-audio');
+        const finalOriginalText = document.getElementById('final-original-text');
+        const finalTranslatedText = document.getElementById('final-translated-text');
+
+        // App State
+        let transcriptionData = {};
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+
+        // --- FUNCTIONAL MICROPHONE LOGIC ---
+        micButton.addEventListener('click', () => {
+            if (isRecording) {
+                mediaRecorder.stop();
+            } else {
+                startRecording();
+            }
+        });
+
+        async function startRecording() {
+            if (COLAB_BACKEND_URL === "YOUR_NGROK_URL_HERE") {
+                showError("Please update the `COLAB_BACKEND_URL` in the HTML file.");
+                return;
+            }
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                isRecording = true;
+                micButton.classList.add('recording');
+                micStatus.textContent = "Recording... Click to stop.";
+                uploadBtn.disabled = true;
+                fileInput.disabled = true;
+
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.start();
+
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    micButton.classList.remove('recording');
+                    micStatus.textContent = "Processing recording...";
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    sendAudioData(audioBlob, 'recording.wav');
+                    
+                    audioChunks = [];
+                    stream.getTracks().forEach(track => track.stop());
+                    uploadBtn.disabled = false;
+                    fileInput.disabled = false;
+                    isRecording = false;
+                };
+            } catch (err) {
+                console.error("Error accessing microphone:", err);
+                showError("Could not access microphone. Please grant permission and try again.");
+            }
+        }
+
+        // --- FILE UPLOAD LOGIC ---
+        uploadBtn.addEventListener('click', () => {
+            if (fileInput.files.length === 0) {
+                alert("Please select a file first.");
+                return;
+            }
+            const file = fileInput.files[0];
+            sendAudioData(file, file.name);
+        });
+
+        // --- UNIVERSAL FUNCTION TO SEND AUDIO TO BACKEND ---
+        async function sendAudioData(audioData, fileName) {
+            const formData = new FormData();
+            formData.append('file', audioData, fileName);
+
+            showStep(loading);
+            loadingText.textContent = "Uploading and transcribing...";
+
+            try {
+                const response = await fetch(`${COLAB_BACKEND_URL}/upload`, {
+                    method: 'POST',
+                    body: formData,
+                });
+                if (!response.ok) throw new Error( (await response.json()).error || 'Upload failed');
+                
+                transcriptionData = await response.json();
+                transcribedTextElem.textContent = transcriptionData.transcribed_text;
+                languageSelect.innerHTML = '';
+                const sortedLanguages = Object.entries(transcriptionData.languages).sort((a, b) => a[0].localeCompare(b[0]));
+                for (const [name, code] of sortedLanguages) {
+                    const option = document.createElement('option');
+                    option.value = code;
+                    option.textContent = name;
+                    languageSelect.appendChild(option);
+                }
+                showStep(step2);
+            } catch (err) {
+                showError(err.message);
+            }
+        }
+
+        // --- TRANSLATION LOGIC ---
+        translateBtn.addEventListener('click', async () => {
+            const selectedLangCode = languageSelect.value;
+            showStep(loading);
+            loadingText.textContent = "Translating and generating new audio...";
+
+            try {
+                const response = await fetch(`${COLAB_BACKEND_URL}/translate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: transcriptionData.session_id,
+                        target_lang_code: selectedLangCode
+                    }),
+                });
+                if (!response.ok) throw new Error( (await response.json()).error || 'Translation failed');
+
+                const result = await response.json();
+                resultAudio.src = `data:audio/wav;base64,${result.audio_data}`;
+                
+                finalOriginalText.textContent = transcriptionData.transcribed_text;
+                finalTranslatedText.textContent = result.translated_text;
+                
+                // DYNAMIC LAYOUT CHANGE
+                leftColumn.classList.remove('lg:col-span-5', 'flex', 'justify-center');
+                leftColumn.classList.add('lg:col-span-3');
+                rightColumn.classList.remove('hidden');
+
+                showStep(step3);
+            } catch (err) {
+                showError(err.message);
+            }
+        });
+
+        // --- UI HELPER FUNCTIONS ---
+        startOverBtn.addEventListener('click', () => location.reload());
+
+        function showStep(stepElement) {
+            [step1, step2, step3, loading, errorState].forEach(step => step.classList.add('hidden'));
+            stepElement.classList.remove('hidden');
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            showStep(errorState);
+        }
+    </script>
+</body>
+</html>
